@@ -217,6 +217,30 @@ export {
   type ParsedDraftResponse,
 } from "./interaction/draft-directive-parser.js";
 
+export {
+  SHORT_HIT_DEFAULT_CHAPTERS,
+  SHORT_HIT_MIN_CHAPTERS,
+  SHORT_HIT_MAX_CHAPTERS,
+  SHORT_HIT_DEFAULT_CHARS_PER_CHAPTER,
+  SHORT_HIT_MIN_CHARS_PER_CHAPTER,
+  SHORT_HIT_MAX_CHARS_PER_CHAPTER,
+  ShortHitOutlineAgent,
+  ShortHitOutlineReviewerAgent,
+  ShortHitOutlineReviserAgent,
+  ShortHitWriterAgent,
+  ShortHitDraftReviewerAgent,
+  ShortHitDraftReviserAgent,
+  ShortHitPackagingAgent,
+  parseShortHitBatchDraft,
+  validateShortHitDraftForFinal,
+  renderShortHitDraftMarkdown,
+  type ShortHitOutline,
+  type ShortHitBatchDraft,
+  type ShortHitChapter,
+  type ShortHitSalesPackage,
+  type ShortHitReference,
+} from "./agents/short-hit.js";
+
 // Agent (pi-agent integration)
 export * from "./agent/index.js";
 
