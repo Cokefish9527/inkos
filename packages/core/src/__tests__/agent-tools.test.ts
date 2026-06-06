@@ -352,6 +352,45 @@ describe("agent deterministic writing tools", () => {
     } as any)).rejects.toThrow("disk write failed");
   });
 
+  it("surfaces unchanged reviser results instead of claiming completion", async () => {
+    const pipeline = {
+      reviseDraft: vi.fn(async () => ({
+        chapterNumber: 1,
+        wordCount: 11132,
+        fixedIssues: [],
+        applied: false,
+        status: "unchanged",
+        skippedReason: "Manual revision did not improve merged audit or AI-tell metrics; kept original chapter.",
+      })),
+    };
+    const tool = createSubAgentTool(pipeline as never, "harbor");
+
+    const result = await tool.execute("tool-reviser-unchanged", {
+      agent: "reviser",
+      bookId: "harbor",
+      chapterNumber: 1,
+      mode: "rewrite",
+      instruction: "整体重写第一章",
+    } as any);
+
+    expect(pipeline.reviseDraft).toHaveBeenCalledWith("harbor", 1, "rewrite");
+    expect(result.details).toMatchObject({
+      kind: "chapter_revision",
+      bookId: "harbor",
+      chapterNumber: 1,
+      mode: "rewrite",
+      applied: false,
+      status: "unchanged",
+      skippedReason: expect.stringContaining("kept original chapter"),
+    });
+    expect(result.content[0]?.type).toBe("text");
+    if (result.content[0]?.type === "text") {
+      expect(result.content[0].text).toContain("Revision not applied");
+      expect(result.content[0].text).toContain("kept original chapter");
+      expect(result.content[0].text).not.toContain("Revision (rewrite) complete");
+    }
+  });
+
   it("uses the active book for writer when bookId is omitted", async () => {
     const pipeline = {
       writeNextChapter: vi.fn(async () => ({

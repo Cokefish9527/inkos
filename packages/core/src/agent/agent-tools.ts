@@ -532,9 +532,32 @@ export function createSubAgentTool(
             const targetBookId = resolveToolBookId("reviser", bookId, activeBookId);
             const resolvedMode: ReviseMode = (mode as ReviseMode) ?? "spot-fix";
             progress(`Revising "${targetBookId}" chapter ${chapterNumber ?? "latest"} in ${resolvedMode} mode...`);
-            await pipeline.reviseDraft(targetBookId, chapterNumber, resolvedMode);
+            const result = await pipeline.reviseDraft(targetBookId, chapterNumber, resolvedMode);
+            const applied = result.applied !== false;
+            const resultChapter = result.chapterNumber ?? chapterNumber;
+            const details = {
+              kind: "chapter_revision",
+              bookId: targetBookId,
+              chapterNumber: resultChapter,
+              mode: resolvedMode,
+              applied,
+              status: result.status,
+              wordCount: result.wordCount,
+              fixedIssues: result.fixedIssues,
+              skippedReason: result.skippedReason,
+            };
+            if (!applied) {
+              progress(`Revision not applied for "${targetBookId}".`);
+              return textResult(
+                `Revision not applied for "${targetBookId}" chapter ${resultChapter ?? "latest"}: ${result.skippedReason ?? result.status ?? "pipeline kept the original chapter"}.`,
+                details,
+              );
+            }
             progress(`Revision complete for "${targetBookId}".`);
-            return textResult(`Revision (${resolvedMode}) complete for "${targetBookId}" chapter ${chapterNumber ?? "latest"}.`);
+            return textResult(
+              `Revision (${resolvedMode}) complete for "${targetBookId}" chapter ${resultChapter ?? "latest"}.`,
+              details,
+            );
           }
 
           case "exporter": {
