@@ -14,11 +14,8 @@ const PRIORITY_FILES = [
 ];
 
 const FULL_INLINE_CHAR_LIMIT = 6000;
-const MAX_COMPACT_LINES_PER_FILE = 80;
-const MAX_COMPACT_LINE_CHARS = 500;
-
-const CONTEXT_SIGNAL_RE =
-  /(active|open|pending|unresolved|current|core|critical|must|进行|活跃|当前|核心|关键|主线|伏笔|未解决|待处理|必须|目标|冲突|证据|状态|角色|关系)/i;
+const MAX_INDEX_HEADINGS_PER_FILE = 80;
+const MAX_INDEX_HEADING_CHARS = 220;
 
 const UPGRADE_HINT =
   "[提示] 当前这本书的架构稿是旧的条目式格式（story_bible.md / volume_outline.md / character_matrix.md）。" +
@@ -89,52 +86,43 @@ function renderContextSection(section: TruthFileSection): string {
     return `=== ${section.name} ===\n${section.content}`;
   }
 
-  const compact = compactTruthFile(section.content);
+  const index = buildMarkdownFileIndex(section.content);
   return [
     `=== ${section.name} ===`,
-    `[未全文注入：原文件 ${section.content.length} 字符 / ${compact.totalLines} 行。以下为结构化压缩索引；避免让旧设定原文淹没当前用户指令。]`,
-    compact.lines.length > 0
-      ? compact.lines.join("\n")
-      : "[未检测到可压缩的标题、活跃项或关键信号行；请在需要时按文件读取完整内容。]",
-    compact.omittedLines > 0 ? `[未注入行数：${compact.omittedLines}。]` : "",
+    `[未全文注入：原文件 ${section.content.length} 字符 / ${index.totalLines} 行。以下为 Markdown 目录索引；避免让旧设定原文淹没当前用户指令。]`,
+    index.lines.length > 0
+      ? index.lines.join("\n")
+      : "[未检测到 Markdown 标题；需要内容时按文件读取完整内容。]",
+    index.omittedHeadings > 0 ? `[未注入标题数：${index.omittedHeadings}。]` : "",
   ].filter(Boolean).join("\n");
 }
 
-function compactTruthFile(content: string): { readonly lines: ReadonlyArray<string>; readonly omittedLines: number; readonly totalLines: number } {
+function buildMarkdownFileIndex(content: string): { readonly lines: ReadonlyArray<string>; readonly omittedHeadings: number; readonly totalLines: number } {
   const lines = content.split(/\r?\n/);
   const selected: string[] = [];
-  let omittedLines = 0;
+  let headingCount = 0;
 
   for (const rawLine of lines) {
-    const line = rawLine.trimEnd();
-    if (!line.trim()) {
-      omittedLines += 1;
-      continue;
-    }
-    if (line.length > MAX_COMPACT_LINE_CHARS) {
-      omittedLines += 1;
-      continue;
-    }
-    if (isContextSignalLine(line)) {
-      selected.push(line);
-      if (selected.length >= MAX_COMPACT_LINES_PER_FILE) {
-        omittedLines += lines.length - selected.length - omittedLines;
-        break;
-      }
-      continue;
-    }
-    omittedLines += 1;
+    const heading = normalizeMarkdownHeading(rawLine);
+    if (!heading) continue;
+    headingCount += 1;
+    if (selected.length < MAX_INDEX_HEADINGS_PER_FILE) selected.push(heading);
   }
 
-  return { lines: selected, omittedLines, totalLines: lines.length };
+  return {
+    lines: selected,
+    omittedHeadings: Math.max(0, headingCount - selected.length),
+    totalLines: lines.length,
+  };
 }
 
-function isContextSignalLine(line: string): boolean {
+function normalizeMarkdownHeading(line: string): string | null {
   const trimmed = line.trimStart();
-  return /^#{1,4}\s+\S/.test(trimmed) ||
-    /^\|.*\|$/.test(trimmed) && CONTEXT_SIGNAL_RE.test(trimmed) ||
-    /^[-*+]\s+/.test(trimmed) && CONTEXT_SIGNAL_RE.test(trimmed) ||
-    CONTEXT_SIGNAL_RE.test(trimmed) && /^[\w\u4e00-\u9fff].{0,80}[:：]/.test(trimmed);
+  const match = /^(#{1,6})\s+(.+?)\s*$/.exec(trimmed);
+  if (!match) return null;
+  const marker = match[1]!;
+  const title = match[2]!;
+  return `${marker} ${title.length > MAX_INDEX_HEADING_CHARS ? `${title.slice(0, MAX_INDEX_HEADING_CHARS - 1)}…` : title}`;
 }
 
 async function readTruthFiles(storyDir: string): Promise<TruthFileSection[]> {

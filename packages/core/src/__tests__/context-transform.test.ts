@@ -47,7 +47,7 @@ describe("createBookContextTransform", () => {
     expect(result[1]).toBe(original[0]);
   });
 
-  it("compacts large truth files instead of injecting their full body", async () => {
+  it("indexes large truth files structurally instead of selecting semantic keyword rows", async () => {
     const storyDir = join(projectRoot, "books", bookId, "story");
     await writeFile(
       join(storyDir, "story_bible.md"),
@@ -69,7 +69,8 @@ describe("createBookContextTransform", () => {
     expect(content).toContain("上下文压缩包");
     expect(content).toContain("story_bible.md");
     expect(content).toContain("## 关键设定");
-    expect(content).toContain("| active | 主角正在追查码头旧案 |");
+    expect(content).toContain("Markdown 目录索引");
+    expect(content).not.toContain("| active | 主角正在追查码头旧案 |");
     expect(content).toContain("未全文注入");
     expect(content).not.toContain("UNBOUNDED_BODY_SHOULD_NOT_BE_INJECTED");
   });
