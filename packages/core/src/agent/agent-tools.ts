@@ -1177,10 +1177,11 @@ export function createPlayEditTool(
       try {
         const playerPersona = params.playerPersona?.trim();
         if (playerPersona) {
+          const existingPlayer = db.getEntity("actor_player");
           upsertPlayEditEntity(db, {
             id: "actor_player",
             type: "actor",
-            label: "玩家",
+            label: existingPlayer?.label ?? "玩家",
             summary: playerPersona,
             status: "已更新",
           });

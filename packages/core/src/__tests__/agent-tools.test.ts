@@ -864,6 +864,13 @@ describe("agent deterministic writing tools", () => {
     });
     const seedDb = createPlayDB(store.runDir("play-edit-session", "main"));
     seedDb.upsertEntity({
+      id: "actor_player",
+      type: "actor",
+      label: "新租客",
+      summary: "刚搬进合租屋。",
+      status: "观察",
+    });
+    seedDb.upsertEntity({
       id: "actor_linqing",
       type: "actor",
       label: "室友林青",
@@ -907,7 +914,7 @@ describe("agent deterministic writing tools", () => {
     expect(snapshot.entities).toEqual(expect.arrayContaining([
       expect.objectContaining({
         id: "actor_player",
-        label: "玩家",
+        label: "新租客",
         summary: "我是刚搬进来的租客，想查清停电夜。",
       }),
       expect.objectContaining({
