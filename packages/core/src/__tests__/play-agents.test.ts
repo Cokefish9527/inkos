@@ -147,12 +147,39 @@ describe("play agents", () => {
     expect(system).toContain("自然语言状态");
   });
 
+  it("mutator prompt keeps each player action to one adjacent beat instead of jumping ahead", async () => {
+    const agent = new PlayWorldMutatorAgent(ctx);
+    const chat = vi.spyOn(agent as unknown as { chat: PlayWorldMutatorAgent["chat"] }, "chat").mockResolvedValue({
+      content: JSON.stringify({ eventId: "evt-1", turn: 1, actionKind: "do" }),
+    } as never);
+
+    await agent.proposeMutation({
+      turn: 1,
+      input: "我冲下台阶去拔那把战斧",
+      action: { actionKind: "do", intent: "冲下台阶并拔起战斧" },
+      context: "当前场景：敌人正在合围，战斧在庭院废墟中。",
+      language: "zh",
+    });
+
+    const messages = chat.mock.calls[0]?.[0] as ReadonlyArray<{ readonly role: string; readonly content: string }>;
+    const system = messages.find((message) => message.role === "system")?.content ?? "";
+    expect(system).toContain("只推进相邻一拍");
+    expect(system).toContain("不要替玩家越过过程");
+  });
+
   it("renderer treats player negation and applied time as canonical", async () => {
     const prompt = buildSceneRendererSystemPrompt("open", "zh");
     expect(prompt).toContain("玩家原话里的否定动作");
     expect(prompt).toContain("没有触碰");
     expect(prompt).toContain("elapsed 和 anchor 是权威时间");
     expect(prompt).toContain("不得另写");
+  });
+
+  it("renderer bridges from the player's action instead of jumping to an epilogue", () => {
+    const prompt = buildSceneRendererSystemPrompt("open", "zh");
+    expect(prompt).toContain("先承接玩家动作");
+    expect(prompt).toContain("不要直接跳到动作完成后");
+    expect(prompt).toContain("不要写总结性尾声");
   });
 
   it("renders the applied state as prose plus suggested actions", async () => {
